@@ -149,11 +149,7 @@ void loop()
     color_select++;
   }
   //Update last button press
-  if(is_button_pressed){
-    last_buttonpress = true;
-} else {
-    last_buttonpress = false;
-}
+last_buttonpress = is_button_pressed;
 //Cycle back through the list of colours
   if(color_select > 19) {
       color_select = 0;
