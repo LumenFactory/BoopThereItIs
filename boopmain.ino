@@ -29,22 +29,37 @@ uint32_t wait_update = 200; // This is the number of MS between frames. e.g. 500
 uint32_t last_buttoncheck = 0;
 uint32_t wait_buttoncheck = 50;
 
+bool last_buttonpress = false; // This variable stores whether the button was pressed in the last loop
+
 ///////////////////////////////////////
 // Light Variables and Animation Variables
 ///////////////////////////////////////
 
 bool is_button_pressed = false; //Check for button press
-bool ledsON = false;
+bool leds_on = false;
 
 //List of vibe colours available
 uint32_t rainbowColors[] = {
-  0xFF0000, // Red
-  0xFF7F00, // Orange
-  0xFFFF00, // Yellow
-  0x00FF00, // Green
-  0x0000FF, // Blue
-  0x4B0082, // Indigo
-  0x8B00FF  // Violet
+0xFF0000,   // Red
+0xFF7F00,   // Orange
+0xFFFF00,   // Yellow
+0x00FF00,   // Green
+0x00FFFF,   // Cyan
+0x0000FF,   // Blue
+0x8A2BE2,   // Indigo
+0xFF00FF,   // Magenta
+0xFF1493,   // Pink
+0x00FF7F,   // Bright Green
+0xFF4500,   // Bright Orange
+0xFFFF66,   // Bright Yellow
+0x00FF00,   // Bright Lime
+0x00FFFF,   // Bright Aqua
+0x00BFFF,   // Bright Sky Blue
+0x9932CC,   // Bright Violet
+0xFF69B4,   // Bright Rose
+0xFF1493,   // Bright Hot Pink
+0x1E90FF,   // Electric Blue
+0xFF4500    // Electric Orange
 };
 
 uint32_t color_select = 0;
@@ -75,7 +90,6 @@ void check_button_state()
   if (digitalRead(BUTTON_PIN) == HIGH)
   {
     is_button_pressed = true;
-    color_select++;
   }
   else {
     is_button_pressed = false;
@@ -128,10 +142,20 @@ void loop()
     draw();
     vibe_flash();
     last_draw = millis();
-        
-    if(color_select > 6) {
+  }
+
+//Color change if button is released
+  if(is_button_pressed == false & last_buttonpress == true) {
+    color_select++;
+  }
+  //Update last button press
+  if(is_button_pressed){
+    last_buttonpress = true;
+} else {
+    last_buttonpress = false;
+}
+//Cycle back through the list of colours
+  if(color_select > 19) {
       color_select = 0;
     }
 }
-}
-
