@@ -55,7 +55,14 @@ void setup()
         Serial.println("setFrequency failed");
     }
 
-    radio.setTxPower(20, false); // range from 14-20 for power, 2nd arg must be true for 69HCW
+    // If you are using a high power RADIO eg RADIOHW, you *must* set a Tx power with the
+    // ishighpowermodule flag set like this:
+    radio.setTxPower(20, true); // range from 14-20 for power, 2nd arg must be true for 69HCW
+
+    // // The encryption key has to be the same as the one in the server
+    // uint8_t key[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+    //                  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+    // radio.setEncryptionKey(key);
 
     Serial.print("radio @");
     Serial.print((int)RADIO_FREQ);
