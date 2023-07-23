@@ -24,10 +24,10 @@ uint32_t last_draw = 0;
 uint32_t wait_draw = 10;
 
 uint32_t last_update = 0;
-uint32_t wait_update = 200; // This is the number of MS between frames. e.g. 500 = 2 fps
+uint32_t wait_update = 10; // This is the number of MS between frames. e.g. 500 = 2 fps
 
 uint32_t last_buttoncheck = 0;
-uint32_t wait_buttoncheck = 50;
+uint32_t wait_buttoncheck = 10;
 
 ///////////////////////////////////////
 // Light Variables and Animation Variables
@@ -36,7 +36,8 @@ uint32_t wait_buttoncheck = 50;
 bool is_button_pressed = false; //Check for button press
 bool last_buttonpress = false; // This variable stores whether the button was pressed in the last loop
 
-uint8_t global_hue = 50; //Sets hue of CHSV to 0
+uint8_t global_hue = 0; //Sets hue of CHSV to 0
+int pos = 0; //initial location of the cursor
 
 //Define the array of LEDs
 CRGB leds[NUM_LEDS];
@@ -69,25 +70,17 @@ void check_button_state()
     is_button_pressed = false;
   }
 }
+///////////////////////////////////////
+// Animation List
+// 1. Vibe Flash
+// 2. Vibe Rainbow
+// 3. Vibe Cursor Spin
+// 4. Truck charge 
+///////////////////////////////////////
 
-void draw()
-{
-  // Turn the built-in LED on when the button is pressed
-  if (is_button_pressed)
-  {
-    digitalWrite(PIN_LED, HIGH);
-  }
-  else
-  {
-    digitalWrite(PIN_LED, LOW);
-  }
-  // Run animation
-  vibe_flash();
-  
-}
 
 ///////////////////////////////////////
-// Vibe Flash animation
+// 1. Vibe Flash animation
 //// Animation outputs colour on all LEDS when button is pressed. Sets all LEDs to black when button is depressed
 ///////////////////////////////////////
 void vibe_flash()
@@ -111,6 +104,93 @@ void vibe_flash()
     Serial.println(global_hue);
   }
   last_buttonpress = is_button_pressed;
+}
+
+///////////////////////////////////////
+// 2. Vibe Rainbow animation
+//// Animation displays spinning rainbow through LEDS when button is pressed. Sets all LEDs to black when button is depressed
+///////////////////////////////////////
+void rainbow_vibe()
+{
+    if(is_button_pressed) {
+     fill_rainbow( leds, NUM_LEDS, global_hue, 1); // If button pressed, light up rainbow
+  }
+    else {
+      for(int i = 0; i < NUM_LEDS; i++){
+      leds[i] = CHSV(0, 0, 0);
+      } //If no button press, LEDs off
+    }
+    FastLED.show();
+  
+  //Hold colors if continuous press
+  if(is_button_pressed == true & last_buttonpress == true) {
+    global_hue = global_hue + 3;
+  }
+  last_buttonpress = is_button_pressed;
+}
+
+///////////////////////////////////////
+// 3. Vibe Cursor Spin animation
+//// Animation displays a cursor of leds that cycle through the strip when button pressed. Sets all LEDs to black when button is depressed
+///////////////////////////////////////
+void vibe_cursor_spin()
+{
+  // a colored dot moving around a cicle, with fading trails
+  if(is_button_pressed){
+  fadeToBlackBy( leds, NUM_LEDS, 20);
+  leds[pos] += CHSV( global_hue, 255, 255);
+  }
+  else {
+      for(int i = 0; i < NUM_LEDS; i++){
+      leds[i] = CHSV(0, 0, 0);
+      } //If no button press, LEDs off
+    }
+  FastLED.show();
+  pos++;
+  
+  if (pos > 255){
+  pos = 0;
+  } //reset position of cursor back to 0 to spin it around the hoop
+
+  //
+  if(is_button_pressed == false & last_buttonpress == true) {
+    global_hue = random8();
+  }
+  last_buttonpress = is_button_pressed; 
+}
+
+void trunk_charge(){
+  // Charge up the trunk with a green light
+  if(is_button_pressed){
+  leds[pos] = CHSV(96, 237, 255);
+  pos++;
+  }
+  else {
+      for(int i = 0; i < NUM_LEDS; i++){
+      leds[i] = CHSV(0, 0, 0);
+      pos = 0;
+      } //If no button press, LEDs off
+   }
+  FastLED.show();
+}
+
+//Draw the animation selected
+void draw()
+{
+  // Turn the built-in LED on when the button is pressed
+  if (is_button_pressed)
+  {
+    digitalWrite(PIN_LED, HIGH);
+  }
+  else
+  {
+    digitalWrite(PIN_LED, LOW);
+  }
+  // Input which animation to use here
+  //vibe_flash();
+  //rainbow_vibe();
+  //vibe_cursor_spin();
+  trunk_charge();
 }
 
 void loop()
