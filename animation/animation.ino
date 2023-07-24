@@ -16,6 +16,8 @@ responsible for controlling lights and setting the animations etc.
 #define DATA_PIN 5
 #define BUTTON_PIN 6
 
+#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
+
 ///////////////////////////////////////
 // Timing Variables
 ///////////////////////////////////////
@@ -31,12 +33,6 @@ uint32_t wait_buttoncheck = 10;
 
 uint32_t flashing_start_time = 0;
 
-// Function prototypes for the animations
-void rainbow_vibe();
-void vibe_cursor_spin();
-void vibe_pulse();
-void vibe_sparkle();
-
 ///////////////////////////////////////
 // Light Variables and Animation Variables
 ///////////////////////////////////////
@@ -44,7 +40,7 @@ void vibe_sparkle();
 bool is_button_pressed = false; //Check for button press
 bool last_buttonpress = false; // This variable stores whether the button was pressed in the last loop
 
-uint8_t global_hue = 0; //Sets hue of CHSV to 0
+uint8_t global_hue = random(255); //Sets hue of CHSV to a random value
 uint8_t pos = 0; //initial location of the cursor
 uint8_t bri = 255; //brightness of LEDs
 int dir = -1; //direction of brightness change for pulse animation
@@ -55,10 +51,21 @@ bool go_firework = false; //variable to store whether firework should be shot of
 //Define the array of LEDs
 CRGB leds[NUM_LEDS];
 
-//Store animations in array
-void (*animationFunctions[])() = {rainbow_vibe, vibe_cursor_spin, vibe_pulse, vibe_sparkle};
+//List of animations available to call:
+  void vibe_flash();
+  void rainbow_vibe();
+  void vibe_cursor_spin();
+  void trunk_charge();
+  void vibe_pulse();
+  void vibe_fireworks();
+  void vibe_sparkle();
 
-int numAnimations = sizeof(animationFunctions) / sizeof(animationFunctions[0]);
+// List of animations to cycle through.  Each is defined as a separate function below.
+typedef void (*animation_list[])();
+animation_list animations = { vibe_cursor_spin, vibe_pulse, vibe_sparkle, vibe_fireworks, vibe_pulse, vibe_cursor_spin, vibe_pulse, vibe_sparkle, vibe_fireworks, vibe_pulse, rainbow_vibe };
+
+
+uint8_t current_animation_number = 0; // Index number of which animation is current
 
 
 //Setup steps go here
@@ -66,7 +73,6 @@ void setup()
 {
   
   Serial.begin(115200);
-  delay(1000); // Put a small delay to ensure everything is setup properly
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
   pinMode(PIN_LED, OUTPUT);
   digitalWrite(PIN_LED, HIGH); // Turn the built-in led on to show there is power
@@ -89,6 +95,14 @@ void check_button_state()
     is_button_pressed = false;
   }
 }
+
+
+void next_animation()
+{
+  // add one to the current animation number, and wrap around at the end
+  current_animation_number = (current_animation_number + 1) % ARRAY_SIZE(animations);
+}
+
 ///////////////////////////////////////
 // Animation List
 // 1. Vibe Flash
@@ -169,19 +183,21 @@ void vibe_cursor_spin()
     }
   FastLED.show();
   
-if (pos >= 255){
+if (pos >= NUM_LEDS){
   pos = 0;
   } //reset position of cursor back to 0 to spin it around the hoop
 
   if(is_button_pressed == true & last_buttonpress == true){
-  pos++;
+  pos += 1;
   
   }
   //
   if(is_button_pressed == false & last_buttonpress == true) {
     global_hue = random8();
+    pos = random(180);
   }
   last_buttonpress = is_button_pressed; 
+  Serial.println(pos);
 }
 
 ///////////////////////////////////////
@@ -224,10 +240,10 @@ void vibe_pulse(){
    bri += dir; // Increase brightness by 1
   }
   // Check if brightness maxed
-  if (bri >= 255) {
-    dir = -5; // decrease brightness
+  if (bri >= 200) {
+    dir = -2; // decrease brightness
   } else if (bri < 10) {
-    dir = 5; // increase brightenss
+    dir = 2; // increase brightenss
   }
   //Color change if button is released
   if(is_button_pressed == false & last_buttonpress == true) {
@@ -246,7 +262,7 @@ void vibe_fireworks(){
 static bool flashing = false;
 
 ///green light to launch firework if probability condition is satisfied
-    if( random8() < chance_of_firework) {
+    if(random8() < chance_of_firework){
     go_firework = true;
   }
 
@@ -254,15 +270,16 @@ static bool flashing = false;
 if(is_button_pressed){
   if(!flashing){
     flashing_start_time = millis();
-    flashing = true;
   }
 }
 // Flash firework if button is down and have green light to launch. Hold the flash for 1 second 
-    if(is_button_pressed && go_firework) {
+    if(is_button_pressed & go_firework) {
       if(millis() - flashing_start_time <= 1000){
         for(int i = 0; i < NUM_LEDS; i++){
 		    uint8_t bri = 255;
 		    leds[i] = CHSV(global_hue, 200, bri);
+        addGlitter(5);
+        flashing = true;
       }
 	}
   //Fade out the firework after being shown for one second
@@ -271,6 +288,7 @@ if(is_button_pressed){
       leds[i] = CHSV(global_hue, 200, bri);
       }
       bri = bri - 5;
+      flashing = true;
     }
     //turn lights off after 2 seconds have passed since firework launch
     else if(millis() - flashing_start_time >= 2000) {
@@ -299,10 +317,9 @@ if(is_button_pressed){
 
 
 ///////////////////////////////////////
-// 7. Vibe sparkle
+// 7. Vibe Sparkle
 //// Upon press, vibe is lit and sparkles while held
 ///////////////////////////////////////
-
 void vibe_sparkle() 
 {
    if(is_button_pressed) {
@@ -336,18 +353,6 @@ void addGlitter( fract8 chanceOfGlitter)
 }
 
 ///////////////////////////////////////
-// Call random animation
-void randomAnimation() {
-
-  // Generate a random number to select an animation function
-  int animationIndex = random(numAnimations);
-  // Call the selected animation function
-  if(is_button_pressed == false && last_buttonpress == true){
-  (*animationFunctions[animationIndex])();
-  }
-}
-
-///////////////////////////////////////
 //Draw the animation selected
 void draw()
 {
@@ -355,24 +360,27 @@ void draw()
   if (is_button_pressed)
   {
     digitalWrite(PIN_LED, HIGH);
+    //animations[current_animation_number]();
+    
   }
-  else
+  else if (!is_button_pressed)
   {
     digitalWrite(PIN_LED, LOW);
   }
-  // Input which animation to use here
-  //vibe_flash();
+  //For testing, input which animation to use here
   //rainbow_vibe();
   //vibe_cursor_spin();
-  //trunk_charge();
   //vibe_pulse();
-  vibe_fireworks();
+  //vibe_fireworks();
   //vibe_sparkle();
+  // vibe_flash();
 
-
-  //randomAnimation();
+  //Call animation from animation array
+  animations[current_animation_number]();
+  if(!is_button_pressed)
+    {EVERY_N_SECONDS( 10 ) { next_animation(); }} // change patterns every 10 seconds only if button is up
+  
 }
-
 
 ///////////////////////////////////////
 //Run code
@@ -391,4 +399,5 @@ void loop()
     draw();
     last_draw = millis();
   }
+
 }
