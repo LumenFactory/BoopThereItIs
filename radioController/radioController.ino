@@ -2,102 +2,98 @@
 #include <SPI.h>
 #include <RH_RF95.h>
 
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-#include <avr/power.h> // Required for 16 MHz Adafruit Trinket
-#endif
+RH_RF95 radio(8, 3); // Adafruit Feather M0 with RFM95
 
-#define SIGNAL_PIN 10
+int LED_PIN = 13;
+int SIGNAL_PIN = 10;
 
-/************ Radio Setup ***************/
-
-// M0 Feather Values
-#define RADIO_FREQ 915.0
-#define RADIO_CS 8
-#define RADIO_INT 3
-#define RADIO_RST 4
-#define LED 13
-
-// Singleton instance of the radio driver
-RH_RF95 radio(RADIO_CS, RADIO_INT);
-
-uint8_t prev_state = LOW;
+uint8_t lastState = 0;
 
 void setup()
 {
-    Serial.begin(115200);
-    // while (!Serial) { delay(1); } // wait until serial console is open, remove if not tethered to computer
 
+    pinMode(LED_PIN, OUTPUT);
     pinMode(SIGNAL_PIN, OUTPUT);
-    pinMode(LED, OUTPUT);
-    pinMode(RADIO_RST, OUTPUT);
-    digitalWrite(RADIO_RST, LOW);
+    Serial.begin(9600);
+    digitalWrite(LED_PIN, LOW);
+    delay(2000);
 
-    Serial.println("Feather RADIO RX Test!");
-    Serial.println();
-
-    // manual reset
-    digitalWrite(RADIO_RST, HIGH);
-    delay(10);
-    digitalWrite(RADIO_RST, LOW);
-    delay(10);
-
+    // while (!Serial)
+    ; // Wait for serial port to be available
+    Serial.println("STARTING");
     if (!radio.init())
     {
-        Serial.println("RADIO radio init failed");
+        Serial.println("init failed");
         while (1)
-            ;
+        {
+            digitalWrite(LED_PIN, HIGH);
+            delay(10);
+            digitalWrite(LED_PIN, LOW);
+            delay(200);
+            digitalWrite(LED_PIN, HIGH);
+            delay(150);
+            digitalWrite(LED_PIN, LOW);
+            delay(600);
+        };
     }
-    Serial.println("RADIO radio init OK!");
 
-    if (!radio.setFrequency(RADIO_FREQ))
-    {
-        Serial.println("setFrequency failed");
-    }
+    Serial.println("Good Radio RC");
+    // Defaults after init are 434.0MHz, 13dBm, Bw = 125 kHz, Cr = 4/5, Sf = 128chips/symbol, CRC on
 
-    // If you are using a high power RADIO eg RADIOHW, you *must* set a Tx power with the
-    // ishighpowermodule flag set like this:
-    radio.setTxPower(20, true); // range from 14-20 for power, 2nd arg must be true for 69HCW
-
-    // // The encryption key has to be the same as the one in the server
-    // uint8_t key[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-    //                  0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-    // radio.setEncryptionKey(key);
-
-    Serial.print("radio @");
-    Serial.print((int)RADIO_FREQ);
-    Serial.println(" MHz");
-
-    digitalWrite(LED, HIGH);
+    // The default transmitter power is 13dBm, using PA_BOOST.
+    // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then
+    // you can set transmitter powers from 5 to 23 dBm:
+    //  driver.setTxPower(23, false);
+    // If you are using Modtronix inAir4 or inAir9,or any other module which uses the
+    // transmitter RFO pins and not the PA_BOOST pins
+    // then you can configure the power transmitter power for -1 to 14 dBm and with useRFO true.
+    // Failure to do that will result in extremely low transmit powers.
+    //  driver.setTxPower(14, true);
+    radio.setFrequency(915.0);
+    radio.setTxPower(20, false);
 }
-
-int ii = 0;
 
 void loop()
 {
     if (radio.available())
     {
         // Should be a message for us now
-        uint8_t buf[RH_RADIO_MAX_MESSAGE_LEN];
+        uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
         uint8_t len = sizeof(buf);
         if (radio.recv(buf, &len))
         {
-            if (!len)
-                return;
-
-            uint8_t new_state = buf[0];
-            if (new_state != prev_state)
+            digitalWrite(LED_PIN, HIGH);
+            if (len > 0)
             {
-                Serial.print(millis());
-                Serial.print("STATE CHANGED: ");
-                Serial.println((new_state == HIGH) ? "PRESSED" : "RELEASED");
-
-                digitalWrite(SIGNAL_PIN, new_state);
-                prev_state = new_state;
-
-                radio.send(buf, len);
-                radio.waitPacketSent();
+                setState(buf[0]);
             }
+
+            RH_RF95::printBuffer("request: ", buf, len);
+            Serial.print("got request: ");
+            Serial.println((char *)buf);
+
+            // Send a reply
+            radio.send(buf, sizeof(buf));
+            radio.waitPacketSent();
+
+            digitalWrite(LED_PIN, LOW);
         }
+        else
+        {
+            Serial.println("recv failed");
+        }
+    }
+}
+
+void setState(uint8_t state)
+{
+    digitalWrite(SIGNAL_PIN, state);
+
+    if (lastState != state)
+    {
+        Serial.print("State Changed: ");
+        Serial.println(state);
+
+        lastState = state;
     }
 }
