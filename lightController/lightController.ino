@@ -29,6 +29,8 @@ typedef void (*AnimationList[])();
 AnimationList animations = {draw_randColor};
 int current_anim = 0;
 
+int motion_offset = 0;
+
 /////////////////////////////////////////////////
 // Core
 /////////////////////////////////////////////////
@@ -50,6 +52,7 @@ void setup()
 void loop()
 {
     EVERY_N_MILLISECONDS(10) { mode = 1 - mode; };
+    EVERY_N_MILLISECONDS(40) { motion_offset = (motion_offset + 1) % NUM_LEDS_PER_STRIP; };
 
     checkSignal();
     draw();
@@ -111,6 +114,30 @@ void draw_randColor()
         {
             leds[ArrayIndex(s, i)] = CHSV(randColorState.hue + s * randColorState.offset, 255, 255);
         }
+    }
+}
+
+void draw_rainbowvibe()
+{
+    if (is_button_pressed)
+    {
+        fill_rainbow(leds, NUM_LEDS, 0, 1); // If button pressed, light up rainbow
+    }
+    else
+    {
+        for (int i = 0; i < NUM_LEDS; i++)
+        {
+            leds[i] = CHSV(0, 0, 0);
+        } // If no button press, LEDs off
+    }
+}
+
+void draw_rainbow()
+{
+    uint8_t bri = (is_button_pressed) ? 255 : 0;
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+        leds[i] = CHSV(i + motion_offset, 200, bri);
     }
 }
 
