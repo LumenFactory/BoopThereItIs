@@ -32,6 +32,7 @@ AnimationList animations = {draw_randColor, draw_rainbowvibe, draw_rainbow};
 int current_anim = 0;
 
 int motion_offset = 0;
+uint8_t global_hue = 0;
 
 /////////////////////////////////////////////////
 // Core
@@ -55,7 +56,7 @@ void loop()
 {
     EVERY_N_MILLISECONDS(10) { mode = 1 - mode; };
     EVERY_N_MILLISECONDS(40) { motion_offset = (motion_offset + 1) % NUM_LEDS_PER_STRIP; };
-
+    EVERY_N_MILLISECONDS(20) { global_hue++; };
     checkSignal();
     draw();
 }
@@ -123,7 +124,7 @@ void draw_rainbowvibe()
 {
     if (is_button_pressed)
     {
-        fill_rainbow(leds, NUM_LEDS, 0, 1); // If button pressed, light up rainbow
+        fill_rainbow(leds, NUM_LEDS, global_hue, 1); // If button pressed, light up rainbow
     }
     else
     {
