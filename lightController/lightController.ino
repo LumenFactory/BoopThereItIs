@@ -23,10 +23,12 @@ uint8_t mode = 0;
 
 // Annimatios
 void draw_randColor();
+void draw_rainbowvibe();
+void draw_rainbow();
 
 // List of animations to cycle through.  Each is defined as a separate function below.
 typedef void (*AnimationList[])();
-AnimationList animations = {draw_randColor};
+AnimationList animations = {draw_randColor, draw_rainbowvibe, draw_rainbow};
 int current_anim = 0;
 
 int motion_offset = 0;
