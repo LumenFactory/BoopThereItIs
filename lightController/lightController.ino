@@ -61,6 +61,7 @@ void loop()
     EVERY_N_MILLISECONDS(10) { mode = 1 - mode; };
     EVERY_N_MILLISECONDS(40) { motion_offset = (motion_offset + 1) % NUM_LEDS_PER_STRIP; };
     EVERY_N_MILLISECONDS(20) { global_hue++; };
+    EVERY_N_SECONDS(10) {set_next_animation();}
     checkSignal();
     draw();
 }
@@ -103,7 +104,6 @@ void draw()
         last_draw = millis();
     }
     FastLED.show();
-    EVERY_N_SECONDS(10) {set_next_animation();}
 }
 
 typedef struct RandColorState
@@ -173,7 +173,7 @@ void vibe_sparkle()
     }
   
   //Color change if button is released
-  if(!is_button_pressed & prev_state) {
+  if(is_button_pressed && !prev_state) {
     global_hue = random8();
   }
 }
