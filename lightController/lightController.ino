@@ -14,6 +14,7 @@ CRGB leds[NUM_STRIPS * NUM_LEDS_PER_STRIP];
 
 bool prev_state = false;
 bool is_button_pressed = false;
+bool first_enter = false;
 uint32_t last_button_press = 0;
 
 uint32_t last_draw = 0;
@@ -79,6 +80,7 @@ void checkSignal()
         last_button_press = millis();
     }
 
+    first_enter = is_button_pressed && !prev_state;
     prev_state = is_button_pressed;
 }
 
@@ -95,6 +97,7 @@ void draw()
 {
     if (last_draw + wait_draw < millis())
     {
+        
         //draw_randColor();
         //draw_rainbowvibe();
         //draw_rainbow();
@@ -194,6 +197,10 @@ void addGlitter( fract8 chanceOfGlitter)
 ///////////////////////////////////////
 void vibe_pulse()
 {
+    //reset brightness when first entering anim
+    if(first_enter) {
+    bri_pulse = 255;
+  }
    if(is_button_pressed) {
       for(int i = 0; i < NUM_LEDS; i++){
 		leds[i] = CHSV(global_hue, 200, bri_pulse);
@@ -214,7 +221,7 @@ void vibe_pulse()
     dir = 2; // increase brightenss
   }
   //Color change if button is released
-  if(!is_button_pressed & prev_state) {
+  if(!is_button_pressed && prev_state) {
     global_hue = random8();
   }
 }
