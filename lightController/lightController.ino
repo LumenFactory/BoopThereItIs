@@ -14,21 +14,26 @@ CRGB leds[NUM_STRIPS * NUM_LEDS_PER_STRIP];
 
 bool prev_state = false;
 bool is_button_pressed = false;
+bool first_enter = false;
 uint32_t last_button_press = 0;
 
 uint32_t last_draw = 0;
 uint32_t wait_draw = 10;
 
 uint8_t mode = 0;
+uint8_t dir = 0;
+uint8_t bri_pulse = 0;
 
 // Annimatios
 void draw_randColor();
 void draw_rainbowvibe();
 void draw_rainbow();
+void vibe_sparkle();
+void vibe_pulse();
 
 // List of animations to cycle through.  Each is defined as a separate function below.
 typedef void (*AnimationList[])();
-AnimationList animations = {draw_randColor, draw_rainbowvibe, draw_rainbow};
+AnimationList animations = {draw_randColor, draw_rainbowvibe, draw_rainbow, vibe_sparkle, vibe_pulse};
 int current_anim = 0;
 
 int motion_offset = 0;
@@ -57,6 +62,7 @@ void loop()
     EVERY_N_MILLISECONDS(10) { mode = 1 - mode; };
     EVERY_N_MILLISECONDS(40) { motion_offset = (motion_offset + 1) % NUM_LEDS_PER_STRIP; };
     EVERY_N_MILLISECONDS(20) { global_hue++; };
+    EVERY_N_SECONDS(10) {set_next_animation();}
     checkSignal();
     draw();
 }
@@ -74,6 +80,7 @@ void checkSignal()
         last_button_press = millis();
     }
 
+    first_enter = is_button_pressed && !prev_state;
     prev_state = is_button_pressed;
 }
 
@@ -90,7 +97,13 @@ void draw()
 {
     if (last_draw + wait_draw < millis())
     {
-        animations[current_anim]();
+        
+        //draw_randColor();
+        //draw_rainbowvibe();
+        //draw_rainbow();
+        //vibe_sparkle();
+        vibe_pulse();
+        //animations[current_anim]();
         last_draw = millis();
     }
     FastLED.show();
@@ -142,6 +155,75 @@ void draw_rainbow()
     {
         leds[i] = CHSV(i + motion_offset, 200, bri);
     }
+}
+
+
+void vibe_sparkle() 
+{
+   if(is_button_pressed) 
+   {
+    for(int i = 0; i < NUM_LEDS; i++)
+    {
+	uint8_t bri = 255;
+		leds[i] = CHSV(global_hue, 200, bri);
+    addGlitter(10);
+	    }
+    }
+    else {
+      for(int i = 0; i < NUM_LEDS; i++){
+      leds[i] = CHSV(0, 0, 0);
+      } //If no button press, LEDs off
+    }
+  
+  //Color change if button is released
+  if(is_button_pressed && !prev_state) {
+    global_hue = random8();
+  }
+}
+
+///////////////////////////////////////
+// Glitter function from FastLED Demo Reel
+///////////////////////////////////////
+void addGlitter( fract8 chanceOfGlitter) 
+{
+  if( random8() < chanceOfGlitter) {
+    leds[ random16(NUM_LEDS) ] += CRGB::White;
+  }
+}
+
+///////////////////////////////////////
+// Vibe pulse
+//// Upon press, pulse the LEDs on the recieved vibe - increase and decrease the speed of the pulse
+///////////////////////////////////////
+void vibe_pulse()
+{
+    //reset brightness when first entering anim
+    if(first_enter) {
+    bri_pulse = 255;
+  }
+   if(is_button_pressed) {
+      for(int i = 0; i < NUM_LEDS; i++){
+		leds[i] = CHSV(global_hue, 200, bri_pulse);
+  }
+	}
+    else {
+      for(int i = 0; i < NUM_LEDS; i++){
+      leds[i] = CHSV(0, 0, 0);
+      } //If no button press, LEDs off
+    }
+
+  //if(is_button_pressed == true & last_buttonpress == true) 
+   bri_pulse += dir; // Increase brightness by 1
+  // Check if brightness maxed
+  if (bri_pulse >= 200) {
+    dir = -2; // decrease brightness
+  } else if (bri_pulse < 10) {
+    dir = 2; // increase brightenss
+  }
+  //Color change if button is released
+  if(!is_button_pressed && prev_state) {
+    global_hue = random8();
+  }
 }
 
 /////////////////////////////////////////////////
