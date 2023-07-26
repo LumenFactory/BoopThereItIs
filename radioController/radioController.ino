@@ -51,6 +51,7 @@ void setup()
     //  driver.setTxPower(14, true);
     radio.setFrequency(915.0);
     radio.setTxPower(20, false);
+    radio.setModemConfig(RH_RF95::Bw500Cr45Sf128);
 }
 
 void loop()
@@ -67,10 +68,6 @@ void loop()
             {
                 setState(buf[0]);
             }
-
-            RH_RF95::printBuffer("request: ", buf, len);
-            Serial.print("got request: ");
-            Serial.println((char *)buf);
 
             // Send a reply
             radio.send(buf, sizeof(buf));
