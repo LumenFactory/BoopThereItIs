@@ -23,6 +23,10 @@ uint32_t wait_draw = 10;
 uint8_t mode = 0;
 uint8_t dir = 0;
 uint8_t bri_pulse = 0;
+uint8_t mins_to_idle = 60; //minutes to wait until idle animation is run
+uint32_t pos = 0;
+
+const unsigned long delayTime = mins_to_idle * 60 * 1000; //convert mins to wait into millis
 
 // Annimatios
 void draw_randColor();
@@ -33,7 +37,7 @@ void vibe_pulse();
 
 // List of animations to cycle through.  Each is defined as a separate function below.
 typedef void (*AnimationList[])();
-AnimationList animations = {draw_randColor, draw_rainbowvibe, draw_rainbow, vibe_sparkle, vibe_pulse};
+AnimationList animations = {draw_randColor, draw_rainbowvibe, vibe_sparkle, vibe_pulse};
 int current_anim = 0;
 
 int motion_offset = 0;
@@ -76,7 +80,7 @@ void checkSignal()
     is_button_pressed = digitalRead(SIGNAL_PIN);
     if (is_button_pressed != prev_state)
     {
-        set_next_animation();
+        //set_next_animation();
         last_button_press = millis();
     }
 
@@ -102,9 +106,13 @@ void draw()
         //draw_rainbowvibe();
         //draw_rainbow();
         //vibe_sparkle();
-        vibe_pulse();
-        //animations[current_anim]();
+        //vibe_pulse();
+        animations[current_anim]();
         last_draw = millis();
+    }
+    if(millis() - last_button_press > delayTime)
+    {
+        idle_animation();
     }
     FastLED.show();
 }
@@ -124,6 +132,12 @@ void setAnim_randColor()
 
 void draw_randColor()
 {
+    if(first_enter)
+    {
+      setAnim_randColor();
+    }
+    if(is_button_pressed)
+    {
     for (int s = 0; s < NUM_STRIPS; s++)
     {
         for (int i = 0; i < NUM_LEDS_PER_STRIP; i++)
@@ -131,6 +145,13 @@ void draw_randColor()
             leds[ArrayIndex(s, i)] = CHSV(randColorState.hue + s * randColorState.offset, 255, 255);
         }
     }
+    }
+    else {
+      for(int i = 0; i < NUM_LEDS; i++)
+      {
+        leds[i] = CHSV(randColorState.hue, 255, 0);
+      }
+    }   
 }
 
 void draw_rainbowvibe()
@@ -160,25 +181,25 @@ void draw_rainbow()
 
 void vibe_sparkle() 
 {
-   if(is_button_pressed) 
-   {
+  if(first_enter)
+  {
+    setAnim_randColor();
+  }
+  if(is_button_pressed) 
+  {
     for(int i = 0; i < NUM_LEDS; i++)
     {
-	uint8_t bri = 255;
-		leds[i] = CHSV(global_hue, 200, bri);
-    addGlitter(10);
+		  leds[i] = CHSV(randColorState.hue, 255, 255);
+      addGlitter(20);
 	    }
     }
-    else {
-      for(int i = 0; i < NUM_LEDS; i++){
-      leds[i] = CHSV(0, 0, 0);
+    else 
+    {
+      for(int i = 0; i < NUM_LEDS; i++)
+      {
+        leds[i] = CHSV(0, 0, 0);
       } //If no button press, LEDs off
     }
-  
-  //Color change if button is released
-  if(is_button_pressed && !prev_state) {
-    global_hue = random8();
-  }
 }
 
 ///////////////////////////////////////
@@ -197,13 +218,15 @@ void addGlitter( fract8 chanceOfGlitter)
 ///////////////////////////////////////
 void vibe_pulse()
 {
-    //reset brightness when first entering anim
-    if(first_enter) {
+  if(first_enter) 
+  {
+    setAnim_randColor();
     bri_pulse = 255;
+    dir = -2;
   }
    if(is_button_pressed) {
       for(int i = 0; i < NUM_LEDS; i++){
-		leds[i] = CHSV(global_hue, 200, bri_pulse);
+		leds[i] = CHSV(randColorState.hue, 255, bri_pulse);
   }
 	}
     else {
@@ -212,18 +235,30 @@ void vibe_pulse()
       } //If no button press, LEDs off
     }
 
-  //if(is_button_pressed == true & last_buttonpress == true) 
-   bri_pulse += dir; // Increase brightness by 1
+  if(is_button_pressed && prev_state)
+  {
+    bri_pulse += dir; // Increase brightness by 1
   // Check if brightness maxed
-  if (bri_pulse >= 200) {
+  }
+  if (bri_pulse >= 255) 
+  {
     dir = -2; // decrease brightness
-  } else if (bri_pulse < 10) {
+  } else if (bri_pulse < 10) 
+  {
     dir = 2; // increase brightenss
   }
-  //Color change if button is released
-  if(!is_button_pressed && prev_state) {
-    global_hue = random8();
-  }
+}
+
+// IDLE ANIMATION - displayed when no button press since delayTime. 3 strips red
+void idle_animation()
+{
+  for (int s = 0; s < 3; s++)
+    {
+        for (int i = 0; i < NUM_LEDS_PER_STRIP; i++)
+        {
+            leds[ArrayIndex(s, i)] = CHSV(0, 255, 255);
+        }
+    }
 }
 
 /////////////////////////////////////////////////
