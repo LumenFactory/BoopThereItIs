@@ -23,7 +23,7 @@ uint32_t wait_draw = 10;
 uint8_t mode = 0;
 uint8_t dir = 0;
 uint8_t bri_pulse = 0;
-uint8_t mins_to_idle = 60; //minutes to wait until idle animation is run
+uint8_t mins_to_idle = 1; //minutes to wait until idle animation is run
 uint32_t pos = 0;
 
 const unsigned long delayTime = mins_to_idle * 60 * 1000; //convert mins to wait into millis
@@ -252,13 +252,10 @@ void vibe_pulse()
 // IDLE ANIMATION - displayed when no button press since delayTime. 3 strips red
 void idle_animation()
 {
-  for (int s = 0; s < 3; s++)
-    {
-        for (int i = 0; i < NUM_LEDS_PER_STRIP; i++)
-        {
-            leds[ArrayIndex(s, i)] = CHSV(0, 255, 255);
-        }
-    }
+  for (int i = 0; i < NUM_LEDS; i++)
+  {
+    leds[i] = CHSV(global_hue,255,200);
+  }
 }
 
 /////////////////////////////////////////////////
